@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CUDA Video Shield</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body data-page="welcome">
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="/index.html">
+        <span class="brand-mark">CVS</span>
+        <span class="brand-copy">
+          <strong>CUDA Video Shield</strong>
+          <small>Protect and verify forensic watermarks</small>
+        </span>
+      </a>
+      <nav class="site-nav">
+        <a href="/protected-maker.html">Protected Video Maker</a>
+        <a href="/piracy-detector.html">Detection of Piracy</a>
+      </nav>
+    </header>
+
+    <main class="main-content">
+      <section class="hero-card reveal">
+        <p class="eyebrow">GPU-Powered Video Security</p>
+        <h1>Build protected videos and test whether a copy is pirated.</h1>
+        <p class="hero-copy">
+          This local website connects your browser to the CUDA programs already in this project.
+          Use the protected video maker to run <code>security_gpu.exe</code>, and use the detector
+          to run <code>detector.exe</code> on uploaded footage.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="/protected-maker.html">Create Protected Video</a>
+          <a class="button secondary" href="/piracy-detector.html">Check for Piracy</a>
+        </div>
+      </section>
+
+      <section class="card-grid">
+        <article class="feature-card reveal delay-1">
+          <p class="card-tag">Page 1</p>
+          <h2>Protected Video Maker</h2>
+          <p>
+            Upload a source video, preview it instantly, run the CUDA protection pipeline, and
+            review the generated protected output in the browser.
+          </p>
+          <ul class="feature-list">
+            <li>Local input preview before upload</li>
+            <li>Runs <code>security_gpu.exe</code> on the server</li>
+            <li>Shows downloadable protected video output</li>
+          </ul>
+          <a class="text-link" href="/protected-maker.html">Open maker page</a>
+        </article>
+
+        <article class="feature-card reveal delay-2">
+          <p class="card-tag">Page 2</p>
+          <h2>Detection of Piracy</h2>
+          <p>
+            Upload any video, preview it, run the detector, and get a clear conclusion that says
+            whether the video appears pirated or not pirated.
+          </p>
+          <ul class="feature-list">
+            <li>Local preview before analysis</li>
+            <li>Runs <code>detector.exe</code> with your uploaded file</li>
+            <li>Shows parsed verdict and detector log</li>
+          </ul>
+          <a class="text-link" href="/piracy-detector.html">Open detector page</a>
+        </article>
+      </section>
+
+      <section class="process-strip reveal delay-3">
+        <div>
+          <span>1</span>
+          <p>Start the local server from the `webpage` folder.</p>
+        </div>
+        <div>
+          <span>2</span>
+          <p>Choose one workflow and upload a video file.</p>
+        </div>
+        <div>
+          <span>3</span>
+          <p>Review previews, generated video, and piracy decision.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>
