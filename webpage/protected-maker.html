@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Protected Video Maker</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body data-page="protect">
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="/index.html">
+        <span class="brand-mark">CVS</span>
+        <span class="brand-copy">
+          <strong>CUDA Video Shield</strong>
+          <small>Protected Video Maker</small>
+        </span>
+      </a>
+      <nav class="site-nav">
+        <a href="/index.html">Welcome</a>
+        <a class="active" href="/protected-maker.html">Protected Video Maker</a>
+        <a href="/piracy-detector.html">Detection of Piracy</a>
+      </nav>
+    </header>
+
+    <main class="main-content">
+      <section class="section-heading reveal">
+        <p class="eyebrow">security_gpu.cu workflow</p>
+        <h1>Create a protected video with CUDA processing.</h1>
+        <p>
+          Upload a video, preview the original file, run the protection pipeline, then inspect the
+          generated protected output and download it.
+        </p>
+      </section>
+
+      <section class="workspace-grid">
+        <article class="panel reveal delay-1">
+          <div class="panel-head">
+            <div>
+              <p class="card-tag">Input</p>
+              <h2>Source Video</h2>
+            </div>
+            <span class="chip muted">Runs `security_gpu.exe`</span>
+          </div>
+
+          <form id="protect-form" class="upload-form">
+            <label class="file-drop" for="protect-video">
+              <input id="protect-video" name="video" type="file" accept="video/*" required>
+              <span class="file-drop-title">Choose a video file</span>
+              <span class="file-drop-subtitle">MP4 and other browser-supported formats work best.</span>
+            </label>
+
+            <div id="protect-file-meta" class="meta-box">
+              No file selected yet.
+            </div>
+
+            <button id="protect-submit" class="button primary wide" type="submit">
+              Generate Protected Video
+            </button>
+          </form>
+
+          <div class="preview-card">
+            <div class="preview-head">
+              <h3>Original Preview</h3>
+              <span class="chip">Local preview</span>
+            </div>
+            <div class="video-frame">
+              <video id="protect-input-preview" controls playsinline preload="metadata"></video>
+              <div id="protect-input-empty" class="empty-state">
+                Select a video to preview it here.
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel reveal delay-2">
+          <div class="panel-head">
+            <div>
+              <p class="card-tag">Output</p>
+              <h2>Protected Result</h2>
+            </div>
+            <span id="protect-status-pill" class="chip muted">Waiting</span>
+          </div>
+
+          <div id="protect-status" class="status-box" data-tone="info">
+            Upload a video, then run the protection process.
+          </div>
+
+          <div class="preview-card">
+            <div class="preview-head">
+              <h3>Protected Video Preview</h3>
+              <a id="protect-download" class="text-link disabled" href="#" download>Download output</a>
+            </div>
+            <div class="video-frame">
+              <video id="protect-output-preview" controls playsinline preload="metadata"></video>
+              <div id="protect-output-empty" class="empty-state">
+                The processed protected video will appear here after CUDA finishes.
+              </div>
+            </div>
+          </div>
+
+          <section class="log-panel">
+            <div class="preview-head">
+              <h3>CUDA Log</h3>
+              <span class="chip">Live result snapshot</span>
+            </div>
+            <pre id="protect-log" class="log-box">No processing has run yet.</pre>
+          </section>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>
