@@ -14,7 +14,7 @@ Every source frame is split into two output frames — Frame A and Frame B. Fram
 
 **Layer 2 — Forensic Watermark (DCT Embedding)**
 
-A pseudo-random invisible watermark is embedded into the DCT mid-band coefficients of every output frame. It survives the A+B averaging the detector uses, and survives H.264 re-encoding at typical pirate quality (CRF 24–32). The detector can confirm whether a recorded video came from a protected source.
+A pseudo-random invisible watermark is embedded into the DCT mid-band coefficients of every output frame. It survives the A+B averaging the detector uses, and survives H.264 re-encoding at typical pirate quality (CRF 24–32). The detector can confirm whether a recorded video came from a protected source
 
 ```
 Source video (25fps)
