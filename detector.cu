@@ -5,28 +5,28 @@
 #include <cstdint>
 #include <cmath>
 #include <vector>
+#include <filesystem>
+#include "watermark_common.h"
 
-__constant__ int kMidBand[30] = {
-    3, 0, 2, 1, 1, 2, 0, 3, 4, 0,
-    3, 1, 2, 2, 1, 3, 0, 4, 5, 0,
-    4, 1, 3, 2, 2, 3, 1, 4, 0, 5
-};
+// ==========================
+// User-tunable global parameters
+// ==========================
+constexpr const char* kDefaultInputVideo = "hybrid_protected_output.mp4"; // Video to analyze when no CLI input is provided.
+constexpr double kDetectThreshold = 0.25;                                  // Correlation threshold for definite watermark detection.
+constexpr double kPossibleThreshold = 0.10;                                // Correlation threshold for weak/possible detection.
+constexpr int kFallbackMaxPairs = 1000000000;                              // Used when frame-count metadata is unavailable.
+constexpr int kCudaThreads = 256;                                           // CUDA threads per block.
+constexpr double kMinRatioShort = 0.10;                                     // Min detected ratio for short clips (<40 pairs).
+constexpr double kMinRatioMedium = 0.05;                                    // Min detected ratio for medium clips (40-99 pairs).
+constexpr double kMinRatioLong = 0.02;                                      // Min detected ratio for long clips (>=100 pairs).
+
+__constant__ int kMidBand[30];
 
 static inline void check_cuda(cudaError_t err, const char* msg) {
     if (err != cudaSuccess) {
         std::fprintf(stderr, "CUDA error: %s (%s)\n", msg, cudaGetErrorString(err));
         std::exit(1);
     }
-}
-
-static inline char wm_bit_from_index(uint32_t idx, uint32_t key) {
-    uint32_t x = idx ^ (key * 0x9E3779B9u);
-    x ^= (x >> 16);
-    x *= 0x7FEB352Du;
-    x ^= (x >> 15);
-    x *= 0x846CA68Bu;
-    x ^= (x >> 16);
-    return (x & 1u) ? 1 : -1;
 }
 
 __device__ inline void bgr_to_ycrcb(float b, float g, float r, float* y, float* cr, float* cb) {
@@ -105,14 +105,15 @@ __global__ void detect_block(
 }
 
 int main(int argc, char** argv) {
-    const char* input_video = (argc > 1) ? argv[1] : "hybrid_protected_output3.mp4";
-    const double detect_threshold = 0.25;
-    const double possible_threshold = 0.10;
+    const char* input_video = (argc > 1) ? argv[1] : kDefaultInputVideo;
+    const double detect_threshold = kDetectThreshold;
+    const double possible_threshold = kPossibleThreshold;
     const int user_max_pairs = (argc > 2) ? std::atoi(argv[2]) : -1;
 
     cv::VideoCapture cap(input_video);
     if (!cap.isOpened()) {
         std::printf("Could not open input: %s\n", input_video);
+        std::printf("Current working directory: %s\n", std::filesystem::current_path().string().c_str());
         return 1;
     }
 
@@ -121,7 +122,7 @@ int main(int argc, char** argv) {
     int total_frames_est = static_cast<int>(cap.get(cv::CAP_PROP_FRAME_COUNT));
     int width_trim = (width / 8) * 8;
     int height_trim = (height / 8) * 8;
-    int dynamic_max_pairs = (total_frames_est > 1) ? (total_frames_est / 2) : 1000000000;
+    int dynamic_max_pairs = (total_frames_est > 1) ? (total_frames_est / 2) : kFallbackMaxPairs;
     int max_pairs = (user_max_pairs > 0) ? user_max_pairs : dynamic_max_pairs;
 
     int device_count = 0;
@@ -134,12 +135,13 @@ int main(int argc, char** argv) {
     cudaDeviceProp prop{};
     check_cuda(cudaGetDeviceProperties(&prop, 0), "cudaGetDeviceProperties");
     std::printf("Using Device: %s\n", prop.name);
+    check_cuda(cudaMemcpyToSymbol(kMidBand, kMidBandTable, sizeof(kMidBandTable)), "cudaMemcpyToSymbol(kMidBand)");
 
     int blocks_w = width_trim / 8;
     int blocks_h = height_trim / 8;
     int total_blocks = blocks_w * blocks_h;
-    const int mid_len = 15;
-    const uint32_t watermark_key = 42;
+    const int mid_len = kDctMidBandLength;
+    const uint32_t watermark_key = kWatermarkKey;
 
     std::vector<signed char> watermark(static_cast<size_t>(total_blocks) * mid_len);
     for (uint32_t i = 0; i < watermark.size(); ++i) {
@@ -170,7 +172,7 @@ int main(int argc, char** argv) {
     int detected_count = 0;
     double total_score = 0.0;
 
-    int threads = 256;
+    int threads = kCudaThreads;
     int blocks_for_blocks = (total_blocks + threads - 1) / threads;
 
     while (pair_count < max_pairs) {
@@ -215,9 +217,9 @@ int main(int argc, char** argv) {
     std::printf("----------------------------------------\n");
     double avg = (pair_count > 0) ? (total_score / pair_count) : 0.0;
     double detected_ratio = (pair_count > 0) ? (static_cast<double>(detected_count) / pair_count) : 0.0;
-    double min_ratio_for_confirm = 0.10;
-    if (pair_count >= 40) min_ratio_for_confirm = 0.05;
-    if (pair_count >= 100) min_ratio_for_confirm = 0.02;
+    double min_ratio_for_confirm = kMinRatioShort;
+    if (pair_count >= 40) min_ratio_for_confirm = kMinRatioMedium;
+    if (pair_count >= 100) min_ratio_for_confirm = kMinRatioLong;
     int min_detected_pairs_for_confirm = static_cast<int>(std::ceil(pair_count * min_ratio_for_confirm));
     if (min_detected_pairs_for_confirm < 1) min_detected_pairs_for_confirm = 1;
 
