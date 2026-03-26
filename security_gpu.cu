@@ -3,16 +3,20 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstdint>
+#include <chrono>
 #include <cmath>
+#include <ctime>
+#include <iomanip>
 #include <vector>
 #include <filesystem>
+#include <sstream>
 #include "watermark_common.h"
 
 // ==========================
 // User-tunable calibration parameters
 // ==========================
-constexpr const char* kDefaultInputVideo = "sample.mp4";            // Input video path used when no CLI arg is passed.
-constexpr const char* kDefaultOutputVideo = "hybrid_protected_output.mp4"; // Output video path used when no CLI arg is passed.
+constexpr const char* kDefaultInputVideo = "test.mp4";            // Input video path used when no CLI arg is passed.
+constexpr const char* kDefaultOutputVideo = "test_output.mp4"; // Output video path used when no CLI arg is passed.
 constexpr float kOutputFpsMultiplier = 4.8f;                        // 25 fps source -> 120 fps output on average.
 
 // High-Frequency Signal Parameters
@@ -21,6 +25,7 @@ constexpr float kLumaSpatialFreq = 16.0f;       // Broader bands are more likely
 constexpr float kChromaAmplitude = 24.0f;       // Checkerboard chroma still targets Bayer/demosaicing weaknesses.
 constexpr float kRollingShutterRowTime = 46e-6f; // Approximate FRONTECH row readout time at 720p/30 fps.
 constexpr float kDctEmbedStrength = 3.0f;       // Strength of the forensic DCT watermark embedded in both A/B frames.
+constexpr const char* kWatermarkPayload = "Toshit's laptop";
 
 constexpr int kCudaThreads = 256;                                   // CUDA threads per block for all kernels.
 __constant__ int kMidBand[30];
@@ -32,10 +37,33 @@ static inline void check_cuda(cudaError_t err, const char* msg) {
     }
 }
 
+static inline void decode_fourcc(int fourcc, char out[5]) {
+    out[0] = static_cast<char>(fourcc & 0xFF);
+    out[1] = static_cast<char>((fourcc >> 8) & 0xFF);
+    out[2] = static_cast<char>((fourcc >> 16) & 0xFF);
+    out[3] = static_cast<char>((fourcc >> 24) & 0xFF);
+    out[4] = '\0';
+
+    for (int i = 0; i < 4; ++i) {
+        if (out[i] == '\0') out[i] = ' ';
+    }
+}
+
 static inline int frames_for_source_frame(int source_frame_index) {
     double start = std::floor(static_cast<double>(source_frame_index) * static_cast<double>(kOutputFpsMultiplier) + 1e-9);
     double end = std::floor(static_cast<double>(source_frame_index + 1) * static_cast<double>(kOutputFpsMultiplier) + 1e-9);
     return static_cast<int>(end - start);
+}
+
+static std::string build_full_payload() {
+    const auto now = std::chrono::system_clock::now();
+    const std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+    std::tm local_tm{};
+    localtime_s(&local_tm, &now_time);
+
+    std::ostringstream payload_stream;
+    payload_stream << kWatermarkPayload << ' ' << std::put_time(&local_tm, "%Y-%m-%d %H:%M");
+    return payload_stream.str();
 }
 
 __device__ inline float clampf(float v, float lo, float hi) {
@@ -143,6 +171,14 @@ __global__ void embedDctWatermark(
 int main(int argc, char** argv) {
     const char* input_video = (argc > 1) ? argv[1] : kDefaultInputVideo;
     const char* output_video = (argc > 2) ? argv[2] : kDefaultOutputVideo;
+    const std::string full_payload = build_full_payload();
+    const std::filesystem::path input_path = std::filesystem::absolute(input_video);
+    const std::filesystem::path output_path = std::filesystem::absolute(output_video);
+
+    std::printf("Embedding payload: %s\n", full_payload.c_str());
+    std::printf("Input video path: %s\n", input_path.string().c_str());
+    std::printf("Output video path: %s\n", output_path.string().c_str());
+    std::printf("Change paths by passing CLI args or editing kDefaultInputVideo / kDefaultOutputVideo.\n");
 
     cv::VideoCapture cap(input_video);
     if (!cap.isOpened()) {
@@ -154,6 +190,19 @@ int main(int argc, char** argv) {
     double fps = cap.get(cv::CAP_PROP_FPS);
     int width = static_cast<int>(cap.get(cv::CAP_PROP_FRAME_WIDTH));
     int height = static_cast<int>(cap.get(cv::CAP_PROP_FRAME_HEIGHT));
+    int frame_count_estimate = static_cast<int>(cap.get(cv::CAP_PROP_FRAME_COUNT));
+    int fourcc_code = static_cast<int>(cap.get(cv::CAP_PROP_FOURCC));
+    char source_codec[5];
+    decode_fourcc(fourcc_code, source_codec);
+
+    std::printf("Source codec: %s\n", source_codec);
+    std::printf("Frame count: %d\n", frame_count_estimate);
+    std::printf("Input FPS from metadata: %.2f\n", fps);
+
+    if (fps <= 0.0 || fps > 240.0) {
+        std::printf("WARNING: invalid FPS %.2f, forcing to 25.00\n", fps);
+        fps = 25.0;
+    }
 
     int width_trim = (width / 8) * 8;
     int height_trim = (height / 8) * 8;
@@ -171,6 +220,7 @@ int main(int argc, char** argv) {
         std::printf("Failed to open output video: %s\n", output_video);
         return 1;
     }
+    std::printf("VideoWriter opened: %s\n", out.isOpened() ? "YES" : "NO");
 
     int device_count = 0;
     check_cuda(cudaGetDeviceCount(&device_count), "cudaGetDeviceCount");
@@ -192,9 +242,11 @@ int main(int argc, char** argv) {
     const int mid_len = kDctMidBandLength;
     const uint32_t watermark_key = kWatermarkKey;
 
+    std::vector<signed char> payload_bits;
+    encode_payload(full_payload, payload_bits);
     std::vector<signed char> watermark(static_cast<size_t>(total_blocks) * mid_len);
-    for (uint32_t i = 0; i < watermark.size(); ++i) {
-        watermark[i] = static_cast<signed char>(wm_bit_from_index(i, watermark_key));
+    for (std::size_t i = 0; i < watermark.size(); ++i) {
+        watermark[i] = payload_bit_for_slot(i, payload_bits, watermark_key);
     }
 
     // === Memory Allocation ===
@@ -231,7 +283,10 @@ int main(int argc, char** argv) {
     int blocks_for_blocks = (total_blocks + threads - 1) / threads;
 
     while (true) {
-        if (!cap.read(frame)) break;
+        if (!cap.read(frame)) {
+            std::printf("cap.read failed at frame %d\n", frame_count);
+            break;
+        }
 
         // frame_in_pinned wraps h_in, so the ROI copy writes directly into the pinned buffer.
         if (frame.cols != width_trim || frame.rows != height_trim) {
@@ -266,6 +321,10 @@ int main(int argc, char** argv) {
         check_cuda(cudaStreamSynchronize(stream), "cudaStreamSynchronize");
 
         int output_frames_for_source = frames_for_source_frame(frame_count);
+        if (output_frames_for_source <= 0) {
+            std::printf("WARNING: source frame %d produced %d output frames, forcing 1\n", frame_count, output_frames_for_source);
+            output_frames_for_source = 1;
+        }
         for (int f = 0; f < output_frames_for_source; ++f) {
             bool use_a = ((total_output_frames_written + f) % 2) == 0;
             out.write(use_a ? frame_out_a_pinned : frame_out_b_pinned);
@@ -289,6 +348,9 @@ int main(int argc, char** argv) {
     cap.release();
     out.release();
 
-    std::printf("\nProcessing complete. Processed %d frames. Saved to %s\n", frame_count, output_video);
+    std::printf("\nProcessing complete. Processed %d frames and wrote %d output frames. Saved to %s\n",
+                frame_count,
+                total_output_frames_written,
+                output_path.string().c_str());
     return 0;
 }
