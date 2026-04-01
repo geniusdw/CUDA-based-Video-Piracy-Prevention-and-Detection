@@ -1,4 +1,4 @@
-# CUDA Video Shield Website
+# CUDA Video Shield Website (v2)
 
 This folder contains a small local website with three pages:
 
@@ -11,17 +11,17 @@ This folder contains a small local website with three pages:
 From `E:\CUDA`, start the local server:
 
 ```powershell
-python .\webpage\server.py
+python .\webpage_v2\server.py
 ```
 
 Then open:
 
 ```text
-http://127.0.0.1:8000
+http://127.0.0.1:8001
 ```
 
 ## Notes
 
-- The server saves uploaded videos in `webpage/runtime/uploads`.
-- Generated protected videos are saved in `webpage/runtime/generated`.
+- The server saves uploaded videos in `webpage_v2/runtime/uploads`.
+- Generated protected videos are saved in `webpage_v2/runtime/generated`.
 - The website expects `security_gpu.exe` and `detector.exe` to exist in the project root.

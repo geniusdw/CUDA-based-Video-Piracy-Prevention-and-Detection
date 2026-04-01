@@ -80,6 +80,14 @@ class AppHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(WEB_ROOT), **kwargs)
 
+    def end_headers(self) -> None:
+        # Force browsers to fetch fresh HTML/CSS/JS so an older webpage build
+        # does not keep showing up after switching to webpage_v2.
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+        super().end_headers()
+
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         route = parsed.path
@@ -104,7 +112,7 @@ class AppHandler(SimpleHTTPRequestHandler):
         self.send_json({"success": False, "error": "Endpoint not found."}, HTTPStatus.NOT_FOUND)
 
     def log_message(self, format_: str, *args) -> None:
-        print(f"[webpage] {self.address_string()} - {format_ % args}")
+        print(f"[webpage_v2] {self.address_string()} - {format_ % args}")
 
     def parse_form(self) -> cgi.FieldStorage:
         content_type = self.headers.get("Content-Type", "")
@@ -240,7 +248,6 @@ class AppHandler(SimpleHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
 
@@ -248,7 +255,7 @@ class AppHandler(SimpleHTTPRequestHandler):
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the local CUDA Video Shield website.")
     parser.add_argument("--host", default="127.0.0.1", help="Host interface to bind to.")
-    parser.add_argument("--port", type=int, default=8000, help="Port to listen on.")
+    parser.add_argument("--port", type=int, default=8001, help="Port to listen on.")
     return parser.parse_args()
 
 
@@ -257,7 +264,7 @@ def main() -> None:
     ensure_runtime_dirs()
 
     server = ThreadingHTTPServer((args.host, args.port), AppHandler)
-    print(f"Serving CUDA Video Shield at http://{args.host}:{args.port}")
+    print(f"Serving CUDA Video Shield v2 at http://{args.host}:{args.port}")
     print(f"Project root: {PROJECT_ROOT}")
     print("Press Ctrl+C to stop the server.")
 

@@ -1,0 +1,20 @@
+Serving CUDA Video Shield v2 at http://127.0.0.1:8001
+Project root: E:\CUDA
+Press Ctrl+C to stop the server.
+[webpage_v2] 127.0.0.1 - "GET / HTTP/1.1" 200 -
+[webpage_v2] 127.0.0.1 - "GET / HTTP/1.1" 200 -
+[webpage_v2] 127.0.0.1 - "GET / HTTP/1.1" 200 -
+[webpage_v2] 127.0.0.1 - "GET /assets/styles.css HTTP/1.1" 200 -
+[webpage_v2] 127.0.0.1 - "GET /assets/app.js HTTP/1.1" 200 -
+[webpage_v2] 127.0.0.1 - code 404, message File not found
+[webpage_v2] 127.0.0.1 - "GET /favicon.ico HTTP/1.1" 404 -
+[webpage_v2] 127.0.0.1 - "GET /protected-maker.html HTTP/1.1" 200 -
+[webpage_v2] 127.0.0.1 - "GET /assets/styles.css HTTP/1.1" 200 -
+[webpage_v2] 127.0.0.1 - "GET /assets/app.js HTTP/1.1" 200 -
+[webpage_v2] 127.0.0.1 - "POST /api/protect HTTP/1.1" 200 -
+[webpage_v2] 127.0.0.1 - "GET /runtime/generated/test_protected_20260330-100812-139750.mp4?t=1774845500588 HTTP/1.1" 200 -
+[webpage_v2] 127.0.0.1 - "GET /runtime/generated/test_protected_20260330-100812-139750.mp4?t=1774845500588 HTTP/1.1" 200 -
+[webpage_v2] 127.0.0.1 - "GET /piracy-detector.html HTTP/1.1" 200 -
+[webpage_v2] 127.0.0.1 - "GET /assets/styles.css HTTP/1.1" 200 -
+[webpage_v2] 127.0.0.1 - "GET /assets/app.js HTTP/1.1" 200 -
+[webpage_v2] 127.0.0.1 - "POST /api/detect HTTP/1.1" 200 -
